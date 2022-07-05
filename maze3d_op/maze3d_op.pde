@@ -11,8 +11,8 @@ boolean lastmouseGood, ctrl, lastmouseCtrl;
 float camX, camY, camZ;
 float camCenterX, camCenterY;
 
-final static int MAZE_WIDTH = 4;
-final static int MAZE_HEIGHT = 4;
+final static int MAZE_WIDTH = 8;
+final static int MAZE_HEIGHT = 8;
 
 final static int ANTIALIAS = 4;
 
@@ -28,7 +28,7 @@ void camUpdate() {
 
 void setup() {
   size(800, 800, P3D);
-  frameRate(30);
+  frameRate(60);
   smooth(ANTIALIAS);
 
   camPitch = radians(30);
