@@ -71,10 +71,10 @@ public class Wall {
 // tile with four walls
 public class Tile {
   int[] pos;
-  float[] renderPos;
   Wall N, E, S, W;
-  Wall[] walls = {N, E, S, W};
-  int k;
+  protected float[] renderPos;
+  protected Wall[] walls = {N, E, S, W};
+  private int k;
 
   // create without declaring sides or locking
   Tile(int[] position) {
@@ -120,12 +120,17 @@ public class Tile {
    return returns;
    }
    */
-   
+
   protected Wall sel(byte side) {
-    if       ((side & 0b0001) != 0)  {return N;}
-    else if  ((side & 0b0010) != 0)  {return E;}
-    else if  ((side & 0b0100) != 0)  {return S;}
-    else                             {return W;}
+    if ((side & 0b0001) != 0) {
+      return N;
+    } else if  ((side & 0b0010) != 0) {
+      return E;
+    } else if  ((side & 0b0100) != 0) {
+      return S;
+    } else {
+      return W;
+    }
   }
 
   // public functions
@@ -158,7 +163,7 @@ public class Tile {
   }
 
   public void render() {
-    for(k = 0; k <= 3; k++){
+    for (k = 0; k <= 3; k++) {
       walls[k].render(renderPos);
     }
   }
@@ -169,19 +174,19 @@ public class Maze {
   public final int numtiles;
   private int k;
   public ArrayList<Tile> tiles = new ArrayList<Tile>();
-  
+
   Maze(int size_x, int size_y) {
     int[] pos = new int[2];
     numtiles = size_x * size_y;
-    for(k = 0; k < numtiles; k++){
+    for (k = 0; k < numtiles; k++) {
       pos[0] = k % MAZE_WIDTH;
       pos[1] = int(k / MAZE_WIDTH);
       tiles.add(new Tile(pos));
     }
   }
-  
-  public void render(){
-    for(k = 0; k < numtiles; k++){
+
+  public void render() {
+    for (k = 0; k < numtiles; k++) {
       tiles.get(k).render();
     }
   }
