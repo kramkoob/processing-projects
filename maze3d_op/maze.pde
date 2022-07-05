@@ -18,8 +18,7 @@ public class Wall {
   boolean moving = false;
   boolean lock = false;
   int lastSetTime;
-  float angle;
-  float movement;
+  float angle, movement;
   // default to unopened wall. angle always required
   Wall(float angle) {
     this(angle, false, false);
@@ -56,17 +55,14 @@ public class Wall {
         moving = false;
         // set this to the maximum so it renders correctly this time around
         movement = MOVE_MILLIS;
-      } else {
-        if (state == false) {
-          // if we've gone down, invert this so it moves/stays down
-          movement = MOVE_MILLIS - movement;
-        }
-        // rendTrap(pos[0] + sin(angle) * TRAP_WIDTH, pos[1] + cos(angle) * TRAP_WIDTH, movement / MOVE_MILLIS * TRAP_DEPTH, angle);
-        rendTrap(add(pos, rotate(0, TRAP_MIDDLE / 2, angle)), movement / MOVE_MILLIS * TRAP_DEPTH, angle);
       }
+      if (state == false) {
+        // if we've gone down, invert this so it moves/stays down
+        movement = MOVE_MILLIS - movement;
+      }
+      rendTrap(add(pos, rotate(0, TRAP_MIDDLE / 2, angle)), movement / MOVE_MILLIS * TRAP_DEPTH, angle);
     } else {
       // if wall isn't animating then just draw it at its extreme high or low, no in-between
-      // rendTrap(pos[0] + sin(angle) * TRAP_WIDTH, pos[1] + cos(angle) * TRAP_WIDTH, float(int(state)) * 50, angle);
       rendTrap(add(pos, rotate(0, TRAP_MIDDLE / 2, angle)), float(int(state)) * TRAP_DEPTH, angle);
     }
   }
@@ -108,6 +104,7 @@ public class Tile {
   }
 
   // select walls from byte
+  /*
   private Wall[] selmul(byte sides){
    sN = ((sides >> 0) & 1);
    sE = ((sides >> 1) & 1);
@@ -122,6 +119,7 @@ public class Tile {
    if(sW == 1){returns[++returncount] = W;};
    return returns;
    }
+   */
    
   protected Wall sel(byte side) {
     if       ((side & 0b0001) != 0)  {return N;}
@@ -160,8 +158,8 @@ public class Tile {
   }
 
   public void render() {
-    for (Wall v : walls) {
-      v.render(renderPos);
+    for(k = 0; k <= 3; k++){
+      walls[k].render(renderPos);
     }
   }
 }
@@ -170,21 +168,21 @@ public class Maze {
   public int size_x, size_y;
   public final int numtiles;
   private int k;
-  private int[] pos = new int[2];
   public ArrayList<Tile> tiles = new ArrayList<Tile>();
   
   Maze(int size_x, int size_y) {
+    int[] pos = new int[2];
     numtiles = size_x * size_y;
     for(k = 0; k < numtiles; k++){
-      this.pos[0] = k % MAZE_WIDTH;
-      this.pos[1] = int(k / MAZE_WIDTH);
+      pos[0] = k % MAZE_WIDTH;
+      pos[1] = int(k / MAZE_WIDTH);
       tiles.add(new Tile(pos));
     }
   }
   
   public void render(){
-    for(Tile v : tiles){
-      v.render();
+    for(k = 0; k < numtiles; k++){
+      tiles.get(k).render();
     }
   }
 }

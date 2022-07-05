@@ -19,6 +19,7 @@ static volatile float vx, vy;
 static volatile float[] result = new float[2];
 static volatile float[] v = new float[2];
 static volatile int k;
+static volatile PShape sh;
 
 // rotate point coordinates by angle
 static float[] rotate(float vx, float vy, float angle){
@@ -42,7 +43,7 @@ static float[] add(float[] a, float[] b){
 
 // draw a trapezoid
 void rendTrap(float pos_x, float pos_y, float pos_z, float angle){
-  PShape sh = createShape();
+  sh = createShape();
   sh.beginShape(QUADS);
   // color
   sh.fill(color(255, 255, 200));

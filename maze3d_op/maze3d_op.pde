@@ -28,7 +28,7 @@ void camUpdate(){
 
 void setup(){
   size(800, 800, P3D);
-  frameRate(4);
+  frameRate(30);
   smooth(ANTIALIAS);
   
   camPitch = radians(30);
