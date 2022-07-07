@@ -1,7 +1,7 @@
 // Classes related to mazes and their tiles and walls
 
 // how many milliseconds for walls to move up and down
-final static int MOVE_MILLIS = 500;
+final static int MOVE_MILLIS = 200;
 
 // constants for ease of reading code
 final static byte NORTH = 1;
