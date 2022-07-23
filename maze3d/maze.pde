@@ -1,17 +1,13 @@
 // Classes related to mazes and their tiles and walls
 
 // how many milliseconds for walls to move up and down
-final static int MOVE_MILLIS = 200;
+final static int MOVE_MILLIS = 1000;
 
 // constants for ease of reading code
 final static byte NORTH = 1;
 final static byte EAST = 2;
 final static byte SOUTH = 4;
 final static byte WEST = 8;
-
-// test optimization
-volatile int sN, sE, sS, sW, count, returncount;
-volatile boolean good;
 
 public class Wall {
   boolean state = false;
@@ -60,10 +56,10 @@ public class Wall {
         // if we've gone down, invert this so it moves/stays down
         movement = MOVE_MILLIS - movement;
       }
-      rendTrap(add(pos, rotate(0, TRAP_MIDDLE / 2, angle)), movement / MOVE_MILLIS * TRAP_DEPTH, angle);
+      wall(pos, movement / MOVE_MILLIS * TILE_HEIGHT, angle);
     } else {
       // if wall isn't animating then just draw it at its extreme high or low, no in-between
-      rendTrap(add(pos, rotate(0, TRAP_MIDDLE / 2, angle)), float(int(state)) * TRAP_DEPTH, angle);
+      wall(pos, float(int(state)) * TILE_HEIGHT, angle);
     }
   }
 }
@@ -92,8 +88,8 @@ public class Tile {
     pos = new int[2];
     pos = position;
     renderPos = new float[2];
-    renderPos[0] = pos[0] * TRAP_WIDTH;
-    renderPos[1] = pos[1] * TRAP_WIDTH;
+    renderPos[0] = pos[0] * TILE_SIZE;
+    renderPos[1] = pos[1] * TILE_SIZE;
   }
 
   // new walls
@@ -102,24 +98,6 @@ public class Tile {
       walls[k] = new Wall(PI / 2 * k, ((sides >> k) & 1) == 1, ((lock >> k) & 1) == 1);
     }
   }
-
-  // select walls from byte
-  /*
-  private Wall[] selmul(byte sides){
-   sN = ((sides >> 0) & 1);
-   sE = ((sides >> 1) & 1);
-   sS = ((sides >> 2) & 1);
-   sW = ((sides >> 3) & 1);
-   count = sN + sE + sS + sW;
-   Wall[] returns = new Wall[count];
-   returncount = -1;
-   if(sN == 1){returns[++returncount] = N;};
-   if(sE == 1){returns[++returncount] = E;};
-   if(sS == 1){returns[++returncount] = S;};
-   if(sW == 1){returns[++returncount] = W;};
-   return returns;
-   }
-   */
 
   protected Wall sel(byte side) {
     if ((side & 0b0001) != 0) {
@@ -138,22 +116,11 @@ public class Tile {
   boolean up(byte side) {
     return sel(side).get();
   }
-  //boolean upmul(byte side){
-  //  return selmul(side)[0].get();
-  //}
 
   // raise a wall
   public void raise(byte side) {
     sel(side).set(true);
   }
-  //void raisemul(byte side){
-  //  selmul(side)[0].set(true);
-  //}
-
-  // lower a wall
-  //void lower(byte side){
-  //  selmul(side)[0].set(false);
-  //}
 
   // set states of all walls
   public void set(byte sides) {
@@ -171,23 +138,79 @@ public class Tile {
 
 public class Maze {
   public int size_x, size_y;
-  public final int numtiles;
-  private int k;
+  public final int numtiles, vis_width, vis_height;
+  private int k, l;
+  private byte[] file;
   public ArrayList<Tile> tiles = new ArrayList<Tile>();
 
+  // Create an empty maze
   Maze(int size_x, int size_y) {
-    int[] pos = new int[2];
     numtiles = size_x * size_y;
+    vis_width = int(TILE_SIZE * size_x);
+    vis_height = int(TILE_SIZE * size_y);
+    makeTiles();
+  }
+
+  // Load a maze from a file
+  Maze(String filename) {
+    file = loadBytes(filename);
+    size_x = file[0] & 0xff;
+    size_y = file[1] & 0xff;
+    numtiles = size_x * size_y;
+    vis_width = int(TILE_SIZE * size_x);
+    vis_height = int(TILE_SIZE * size_y);
+    makeTiles();
+    for (k = 0; k < numtiles; k += 2) {
+      tiles.get(k).set(lbyte(floor(float(k / 2))));
+      tiles.get(k + 1).set(rbyte(floor(float(k / 2))));
+    }
+  }
+
+  // create maze tiles
+  private void makeTiles() {
+    int[] pos = new int[2];
     for (k = 0; k < numtiles; k++) {
-      pos[0] = k % MAZE_WIDTH;
-      pos[1] = int(k / MAZE_WIDTH);
+      pos[0] = k % size_x;
+      pos[1] = int(k / size_y);
       tiles.add(new Tile(pos));
     }
   }
 
+  // read the left four bits from an index in the file contents and shift over
+  private byte lbyte(int index) {
+    byte lbyte = byte((file[index + 2] & 0xf0) >> 4);
+    return lbyte;
+  }
+  // read right four bits from an index in the file contents
+  private byte rbyte(int index) {
+    byte rbyte = byte(file[index + 2] & 0x0f);
+    return rbyte;
+  }
+
+  // draw maze
   public void render() {
+    // floor
+    pushMatrix();
+    fill(255);
+    translate(camCenterX, camCenterY, -TILE_HEIGHT * 0.1);
+    box(camCenterX * 3, camCenterY * 3, TILE_HEIGHT);
+    popMatrix();
+
+    // tiles
     for (k = 0; k < numtiles; k++) {
+      //tiles
       tiles.get(k).render();
+    }
+
+    // pillars
+    for (k = 0; k < size_x + 1; k++) {
+      for (l = 0; l < size_y + 1; l++) {
+        pushMatrix();
+        fill(255, 220, 180);
+        translate(k * TILE_SIZE - PILLAR_CORNER, l * TILE_SIZE - PILLAR_CORNER, TILE_HEIGHT);
+        box(PILLAR_SIZE, PILLAR_SIZE, TILE_HEIGHT);
+        popMatrix();
+      }
     }
   }
 }
