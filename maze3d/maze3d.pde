@@ -15,6 +15,7 @@
 // pre-check maze file for errors
 // menus
 // textured floor and tops of walls
+// math needs work or definitions
 
 // Filename (in sketch folder) of maze to read
 final static String FILENAME = "maze0.bin";
@@ -42,14 +43,15 @@ float camX, camY, camZ;
 float camCenterX, camCenterY;
 
 Maze maze;
+PImage FLOOR_TEXTURE;
 
 // initialize a few variables for the camera
 void camInit(Maze maze) {
   camYaw = PI;
   camPitch = PI / 4;
-  camDist = TILE_SIZE * maze.size_x * 1.5;
-  camCenterX = maze.size_x * TILE_SIZE / 2 - TILE_SIZE / 2;
-  camCenterY = maze.size_y * TILE_SIZE / 2 - TILE_SIZE / 2;
+  camDist = TILE_SIZE * maze.width * 1.5;
+  camCenterX = maze.width * TILE_SIZE / 2 - TILE_SIZE / 2;
+  camCenterY = maze.height * TILE_SIZE / 2 - TILE_SIZE / 2;
   camUpdate();
 }
 // calculate where the camera should be and move it there
@@ -64,7 +66,12 @@ void setup() {
   size(800, 800, P3D);
   frameRate(FRAMERATE);
   smooth(ANTIALIAS);
+  noStroke();
   perspective(FOV, ASPECT, CAMERAZ/10.0, CAMERAZ*250.0);
+
+  FLOOR_TEXTURE = makeFloorTexture();
+  textureMode(NORMAL);
+  textureWrap(CLAMP);
 
   maze = new Maze(FILENAME);
 

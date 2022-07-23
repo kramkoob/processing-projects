@@ -42,7 +42,7 @@ public class Wall {
     this.lock = lock;
   }
   // draw wall
-  void render(float pos[]) {
+  void render() {
     // if wall should animate due to a recent state change
     if (moving && !lock) {
       movement = millis() - lastSetTime;
@@ -56,10 +56,10 @@ public class Wall {
         // if we've gone down, invert this so it moves/stays down
         movement = MOVE_MILLIS - movement;
       }
-      wall(pos, movement / MOVE_MILLIS * TILE_HEIGHT, angle);
+      wall(movement / MOVE_MILLIS * TILE_HEIGHT, angle);
     } else {
       // if wall isn't animating then just draw it at its extreme high or low, no in-between
-      wall(pos, float(int(state)) * TILE_HEIGHT, angle);
+      wall(float(int(state)) * TILE_HEIGHT, angle);
     }
   }
 }
@@ -129,36 +129,53 @@ public class Tile {
     }
   }
 
+  // draw this tile
   public void render() {
+    pushMatrix();
+    // floor of tile
+    translate(renderPos[0], renderPos[1], -WALL_LIP);
+    pushMatrix();
+    translate(-TILE_SIZE / 2, -TILE_SIZE / 2, TILE_HEIGHT / 2 + WALL_LIP);
+    beginShape();
+    fill(255);
+    texture(FLOOR_TEXTURE);
+    vertex(0, 0, 0, 0, 0);
+    vertex(TILE_SIZE, 0, 0, 1, 0);
+    vertex(TILE_SIZE, TILE_SIZE, 0, 1, 1);
+    vertex(0, TILE_SIZE, 0, 0, 1);
+    endShape();
+    popMatrix();
+
+    // the four walls
     for (k = 0; k <= 3; k++) {
-      walls[k].render(renderPos);
+      walls[k].render();
     }
+    popMatrix();
   }
 }
 
 public class Maze {
-  public int size_x, size_y;
-  public final int numtiles, vis_width, vis_height;
+  public int width, height;
+  public final int numtiles;
   private int k, l;
   private byte[] file;
   public ArrayList<Tile> tiles = new ArrayList<Tile>();
 
   // Create an empty maze
-  Maze(int size_x, int size_y) {
-    numtiles = size_x * size_y;
-    vis_width = int(TILE_SIZE * size_x);
-    vis_height = int(TILE_SIZE * size_y);
+  Maze(int width, int height) {
+    this.width = width;
+    print(this.width);
+    this.height = height;
+    numtiles = this.width * this.height;
     makeTiles();
   }
 
   // Load a maze from a file
   Maze(String filename) {
     file = loadBytes(filename);
-    size_x = file[0] & 0xff;
-    size_y = file[1] & 0xff;
-    numtiles = size_x * size_y;
-    vis_width = int(TILE_SIZE * size_x);
-    vis_height = int(TILE_SIZE * size_y);
+    this.width = file[0] & 0xff;
+    this.height = file[1] & 0xff;
+    numtiles = this.width * this.height;
     makeTiles();
     for (k = 0; k < numtiles; k += 2) {
       tiles.get(k).set(lbyte(floor(float(k / 2))));
@@ -170,8 +187,8 @@ public class Maze {
   private void makeTiles() {
     int[] pos = new int[2];
     for (k = 0; k < numtiles; k++) {
-      pos[0] = k % size_x;
-      pos[1] = int(k / size_y);
+      pos[0] = k % this.width;
+      pos[1] = int(k / this.height);
       tiles.add(new Tile(pos));
     }
   }
@@ -189,22 +206,14 @@ public class Maze {
 
   // draw maze
   public void render() {
-    // floor
-    pushMatrix();
-    fill(255);
-    translate(camCenterX, camCenterY, -TILE_HEIGHT * 0.1);
-    box(camCenterX * 3, camCenterY * 3, TILE_HEIGHT);
-    popMatrix();
-
     // tiles
     for (k = 0; k < numtiles; k++) {
-      //tiles
       tiles.get(k).render();
     }
 
     // pillars
-    for (k = 0; k < size_x + 1; k++) {
-      for (l = 0; l < size_y + 1; l++) {
+    for (k = 0; k < this.width + 1; k++) {
+      for (l = 0; l < this.height + 1; l++) {
         pushMatrix();
         fill(255, 220, 180);
         translate(k * TILE_SIZE - PILLAR_CORNER, l * TILE_SIZE - PILLAR_CORNER, TILE_HEIGHT);
