@@ -14,11 +14,15 @@
 // to-do:
 // pre-check maze file for errors
 // menus
-// textured floor and tops of walls
+// textured tops of walls
 // math needs work or definitions
+// texture error on r300
 
 // Filename (in sketch folder) of maze to read
 final static String FILENAME = "maze0.bin";
+
+// Run fullscreen, otherwise run 800x600
+final static boolean FULLSCREEN = true;
 
 // Set antialiasing (1 = fast, jagged edges; 8 = slow, smooth edges)
 final static int ANTIALIAS = 1;
@@ -62,8 +66,15 @@ void camUpdate() {
   camera(camX, camY, camZ, camCenterX, camCenterY, 0, 0, 0, -1);
 }
 
+void settings() {
+  if (FULLSCREEN) {
+    fullScreen(P3D);
+  } else {
+    size(800, 600, P3D);
+  }
+}
+
 void setup() {
-  size(800, 800, P3D);
   frameRate(FRAMERATE);
   smooth(ANTIALIAS);
   noStroke();
