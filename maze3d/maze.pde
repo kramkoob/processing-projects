@@ -4,10 +4,10 @@
 final static int MOVE_MILLIS = 1000;
 
 // constants for ease of reading code
-final static byte NORTH = 1;
-final static byte EAST = 2;
-final static byte SOUTH = 4;
-final static byte WEST = 8;
+final static byte NORTH = 0b0001;
+final static byte EAST = 0b0010;
+final static byte SOUTH = 0b0100;
+final static byte WEST = 0b1000;
 
 public class Wall {
   boolean state = false;
@@ -72,25 +72,31 @@ public class Tile {
   protected Wall[] walls = {N, E, S, W};
   private int k;
 
+  Tile(int[] pos, byte side, byte lock) {
+    init(pos, side, lock);
+  }
+
   // create without declaring sides or locking
-  Tile(int[] position) {
-    this(position, byte(0), byte(0));
+  Tile(int[] pos) {
+    init(pos, byte(0), byte(0));
   }
 
   // create with locked sides (e.g. border walls)
-  Tile(int[] position, byte side) {
-    this(position, side, byte(0b1111));
+  Tile(int[] pos, byte side) {
+    byte initial_sides = 0b1111;
+    init(pos, side, initial_sides);
+  }
+  
+  private void init(int[] pos, byte side, byte lock){
+    newWalls(side, lock);
+    this.pos = new int[2];
+    this.pos = pos;
+    this.renderPos = new float[2];
+    this.renderPos[0] = this.pos[0] * TILE_SIZE;
+    this.renderPos[1] = this.pos[1] * TILE_SIZE;
   }
 
   // create declaring sides' states and lock status
-  Tile(int[] position, byte side, byte lock) {
-    newWalls(side, lock);
-    pos = new int[2];
-    pos = position;
-    renderPos = new float[2];
-    renderPos[0] = pos[0] * TILE_SIZE;
-    renderPos[1] = pos[1] * TILE_SIZE;
-  }
 
   // new walls
   protected void newWalls(byte sides, byte lock) {
@@ -100,11 +106,11 @@ public class Tile {
   }
 
   protected Wall sel(byte side) {
-    if ((side & 0b0001) != 0) {
+    if ((side & NORTH) != 0) {
       return N;
-    } else if  ((side & 0b0010) != 0) {
+    } else if  ((side & EAST) != 0) {
       return E;
-    } else if  ((side & 0b0100) != 0) {
+    } else if  ((side & SOUTH) != 0) {
       return S;
     } else {
       return W;
