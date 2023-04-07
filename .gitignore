@@ -1,2 +1,6 @@
-
+/tools/
+/templates/
+/modes/
+/libraries/
+/examples/
 *.bak
