@@ -1,13 +1,13 @@
 // Classes related to mazes and their tiles and walls
 
 // how many milliseconds for walls to move up and down
-final static int MOVE_MILLIS = 1000;
+final static int MOVE_MILLIS = 100;
 
 // constants for ease of reading code
-final static byte NORTH = 1;
-final static byte EAST = 2;
-final static byte SOUTH = 4;
-final static byte WEST = 8;
+final static byte NORTH = 0b0001;
+final static byte EAST = 0b0010;
+final static byte SOUTH = 0b0100;
+final static byte WEST = 0b1000;
 
 public class Wall {
   boolean state = false;
@@ -100,11 +100,11 @@ public class Tile {
   }
 
   protected Wall sel(byte side) {
-    if ((side & 0b0001) != 0) {
+    if ((side & NORTH) != 0) {
       return N;
-    } else if  ((side & 0b0010) != 0) {
+    } else if  ((side & EAST) != 0) {
       return E;
-    } else if  ((side & 0b0100) != 0) {
+    } else if  ((side & SOUTH) != 0) {
       return S;
     } else {
       return W;
@@ -139,10 +139,10 @@ public class Tile {
     beginShape();
     fill(255);
     texture(FLOOR_TEXTURE);
-    vertex(0, 0, 0, 0, 0);
-    vertex(TILE_SIZE, 0, 0, 1, 0);
-    vertex(TILE_SIZE, TILE_SIZE, 0, 1, 1);
-    vertex(0, TILE_SIZE, 0, 0, 1);
+    vertex(0, 0, 1, 0, 0);
+    vertex(TILE_SIZE, 0, 1, 1, 0);
+    vertex(TILE_SIZE, TILE_SIZE, 1, 1, 1);
+    vertex(0, TILE_SIZE, 1, 0, 1);
     endShape();
     popMatrix();
 
@@ -164,7 +164,6 @@ public class Maze {
   // Create an empty maze
   Maze(int width, int height) {
     this.width = width;
-    print(this.width);
     this.height = height;
     numtiles = this.width * this.height;
     makeTiles();
@@ -177,19 +176,27 @@ public class Maze {
     this.height = file[1] & 0xff;
     numtiles = this.width * this.height;
     makeTiles();
-    for (k = 0; k < numtiles; k += 2) {
-      tiles.get(k).set(lbyte(floor(float(k / 2))));
-      tiles.get(k + 1).set(rbyte(floor(float(k / 2))));
-    }
   }
 
   // create maze tiles
   private void makeTiles() {
     int[] pos = new int[2];
-    for (k = 0; k < numtiles; k++) {
+    for (k = 0; k < numtiles + 1; k++) {
       pos[0] = k % this.width;
       pos[1] = int(k / this.height);
       tiles.add(new Tile(pos));
+    }
+  }
+  
+  public void setTiles(boolean tilesSet) {
+    for (k = 0; k < numtiles; k += 2) {
+      if(tilesSet) {
+        tiles.get(k).set(lbyte(floor(float(k / 2))));
+        tiles.get(k + 1).set(rbyte(floor(float(k / 2))));
+      }else{
+        tiles.get(k).set(byte(0x00));
+        tiles.get(k + 1).set(byte(0x00));
+      }
     }
   }
 
@@ -215,9 +222,17 @@ public class Maze {
     for (k = 0; k < this.width + 1; k++) {
       for (l = 0; l < this.height + 1; l++) {
         pushMatrix();
-        fill(255, 220, 180);
+        //fill(255, 220, 180);
+        fill(255, 255, 255);
         translate(k * TILE_SIZE - PILLAR_CORNER, l * TILE_SIZE - PILLAR_CORNER, TILE_HEIGHT);
         box(PILLAR_SIZE, PILLAR_SIZE, TILE_HEIGHT);
+        fill(255, 0, 0);
+        beginShape(QUADS);
+        vertex(-PILLAR_SIZE / 2, -PILLAR_SIZE / 2, TILE_HEIGHT / 2 + 1);
+        vertex(PILLAR_SIZE / 2, -PILLAR_SIZE / 2, TILE_HEIGHT / 2 + 1);
+        vertex(PILLAR_SIZE / 2, PILLAR_SIZE / 2, TILE_HEIGHT / 2 + 1);
+        vertex(-PILLAR_SIZE / 2, PILLAR_SIZE / 2, TILE_HEIGHT / 2 + 1);
+        endShape();
         popMatrix();
       }
     }

@@ -5,7 +5,7 @@
 // July 2022
 
 // File format: first two bytes are width and height respectively
-// Following bytes are two 4-bit pairs (each) defining tile sides
+// Following bytes are two 4-bit pairs (each byte) defining tile sides
 // Bit 0: north
 // Bit 1: east
 // Bit 2: south
@@ -21,23 +21,23 @@
 final static String FILENAME = "maze0.bin";
 
 // Set antialiasing (1 = fast, jagged edges; 8 = slow, smooth edges)
-final static int ANTIALIAS = 1;
+final static int ANTIALIAS = 8;
 
 // Set framerate (default 30)
-final static int FRAMERATE = 30;
+final static int FRAMERATE = 60;
 
 // Call system.gc after each frame? (test purposes. large perf hit, should always be off)
 final static boolean COLLECT = false;
 
-
 final static float FOV = PI / 3.0;
-final float ASPECT = float(width) / float(height);
+// Aspect defined in setup instead
+//final float ASPECT = float(width) / float(height);
 final float CAMERAZ = (height/2.0) / tan(FOV/2.0);
 
 float camDist, camYaw, camPitch;
 int lastmouseX, lastmouseY;
 float lastcamDist, lastcamYaw, lastcamPitch;
-boolean lastmouseGood, ctrl, lastmouseCtrl;
+boolean lastmouseGood, ctrl, lastmouseCtrl, enter;
 
 float camX, camY, camZ;
 float camCenterX, camCenterY;
@@ -63,11 +63,12 @@ void camUpdate() {
 }
 
 void setup() {
-  size(800, 800, P3D);
+  //size(800, 800, P3D);
+  fullScreen(P3D);
   frameRate(FRAMERATE);
   smooth(ANTIALIAS);
   noStroke();
-  perspective(FOV, ASPECT, CAMERAZ/10.0, CAMERAZ*250.0);
+  perspective(FOV, float(width) / float(height), CAMERAZ/10.0, CAMERAZ*250.0);
 
   FLOOR_TEXTURE = makeFloorTexture();
   textureMode(NORMAL);
@@ -83,10 +84,16 @@ void keyPressed() {
   if (!ctrl & keyCode == CONTROL) {
     ctrl = true;
   }
+  if(keyCode == ENTER) {
+    enter = !enter;
+    maze.setTiles(enter);
+  }
 }
 // reset the "if ctrl is pressed" variable if a key is released
 void keyReleased() {
-  ctrl = false;
+  if (ctrl & keyCode == CONTROL) {
+    ctrl = false;
+  }
 }
 
 void draw() {

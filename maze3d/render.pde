@@ -8,6 +8,11 @@
 
 // box width and height, and draw points
 // for a 24x24 maze spanning 12'x12', this is 6" in mm
+
+// floro blacko
+// wallos whitdos
+// wallotoppo redo
+
 final static int TILE_SIZE = 152;
 // 3" in mm
 final static float TILE_HEIGHT = 76;
@@ -25,10 +30,18 @@ volatile int k, l;
 // draw wall (MUST be in another matrix where position has already been set!)
 void wall(float pos_z, float angle) {
   pushMatrix();
-  fill(color(255, 255, 200));
-  rotate(angle);
+  //fill(color(255, 255, 200));
+  fill(color(255));
+  rotate(angle + PI);
   translate(0, WALL_CENTER_DIST, pos_z);
   box(WALL_LENGTH, WALL_WIDTH, TILE_HEIGHT);
+  fill(color(255,0,0));
+  beginShape(QUADS);
+  vertex(-WALL_LENGTH / 2, -WALL_WIDTH / 2, TILE_HEIGHT / 2 + 1);
+  vertex(WALL_LENGTH / 2, -WALL_WIDTH / 2, TILE_HEIGHT / 2 + 1);
+  vertex(WALL_LENGTH / 2, WALL_WIDTH / 2, TILE_HEIGHT / 2 + 1);
+  vertex(-WALL_LENGTH / 2, WALL_WIDTH / 2, TILE_HEIGHT / 2 + 1);
+  endShape();
   popMatrix();
 }
 
@@ -36,16 +49,19 @@ void wall(float pos_z, float angle) {
 PImage makeFloorTexture() {
   PImage tex = createImage(TILE_SIZE, TILE_SIZE, RGB);
   int texsize = TILE_SIZE * TILE_SIZE;
-  int halftile = TILE_SIZE / 2;
-  int halfline = LINE_WIDTH / 2;
-  int x, y;
+  //int halftile = TILE_SIZE / 2;
+  //int halfline = LINE_WIDTH / 2;
+  //int x, y;
   tex.loadPixels();
   for (k = 0; k < texsize; k++) {
+    /*
     x = k % TILE_SIZE;
     y = floor(k / TILE_SIZE);
     if (!(((x > (halftile - halfline)) && (x < (halftile + halfline))) || ((y > (halftile - halfline)) && (y < (halftile + halfline)))) ){
       tex.pixels[k] = color(255, 255, 255);
     }
+    */
+    tex.pixels[k] = color(0);
   }
   tex.updatePixels();
   return tex;
