@@ -34,6 +34,12 @@ void reset_minmax(){
 }
 
 void setup() {  
+  // initialize display
+  frameRate(60);
+  // fullScreen();
+  size(300, 300);
+  noStroke();
+  
   // initialize variables
   buf = "";
   loc = -1;
@@ -42,17 +48,19 @@ void setup() {
   
   // wait for serial port
   print("Waiting for serial... ");
-  while(Serial.list().length == 0) delay(1000);
+  String portName = "";
+  while(portName == ""){
+    for(int i = 0; i < Serial.list().length; i++){
+      if(Serial.list()[i].indexOf("USB") >= 0){
+        portName = Serial.list()[i];
+      }
+    }
+    delay(1000);
+  }
   
   // initialize serial port
-  String portName = Serial.list()[0];
   myPort = new Serial(this, portName, 115200);
   println("using " + portName);
-
-  // initialize display
-  frameRate(60);
-  fullScreen();
-  noStroke();
 }
 
 void draw(){
