@@ -1,6 +1,6 @@
 /*
 
-SerialVisualizer
+ThermalVisualizer
 by Thomas Dodds
 9/24/2024
 
