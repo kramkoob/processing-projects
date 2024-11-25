@@ -5,9 +5,12 @@
  */
  
 // important things to configure
-final static byte _ball_size = 4;
 final static byte _maxplayers = 4;
-final static int baud = 115200;
+final static int baud = 19200;
+
+final static float _ball_size = 0.2;
+final static float _bat_size = 10;
+final static float _bat_speed = 1.5;
 
 // less important things
 final static int hintFadeDuration = 1000;
@@ -44,6 +47,119 @@ int sel = -1;
 float wu;
 int lf;
 
+final static char[][] digits = {
+{
+  0b00111000,
+  0b01101100,
+  0b11000110,
+  0b11000110,
+  0b11010110,
+  0b11010110,
+  0b11000110,
+  0b11000110,
+  0b01101100,
+  0b00111000
+},{
+  0b00011000,
+  0b00111000,
+  0b01111000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b00011000,
+  0b01111110
+},{
+  0b01111100,
+  0b11000110,
+  0b00000110,
+  0b00001100,
+  0b00011000,
+  0b00110000,
+  0b01100000,
+  0b11000000,
+  0b11000110,
+  0b11111110
+},{
+  0b01111100,
+  0b11000110,
+  0b00000110,
+  0b00000110,
+  0b00111100,
+  0b00000110,
+  0b00000110,
+  0b00000110,
+  0b11000110,
+  0b01111100
+},{
+  0b00001100,
+  0b00011100,
+  0b00111100,
+  0b01101100,
+  0b11001100,
+  0b11111110,
+  0b00001100,
+  0b00001100,
+  0b00001100,
+  0b00011110
+},{
+  0b11111110,
+  0b11000000,
+  0b11000000,
+  0b11000000,
+  0b11111100,
+  0b00000110,
+  0b00000110,
+  0b00000110,
+  0b11000110,
+  0b01111100,
+},{
+  0b00111000,
+  0b01100000,
+  0b11000000,
+  0b11000000,
+  0b11111100,
+  0b11000110,
+  0b11000110,
+  0b11000110,
+  0b11000110,
+  0b01111100
+},{
+  0b11111110,
+  0b11000110,
+  0b00000110,
+  0b00000110,
+  0b00001100,
+  0b00011000,
+  0b00110000,
+  0b00110000,
+  0b00110000,
+  0b00110000
+},{
+  0b01111100,
+  0b11000110,
+  0b11000110,
+  0b11000110,
+  0b01111100,
+  0b11000110,
+  0b11000110,
+  0b11000110,
+  0b11000110,
+  0b11000110
+},{
+  0b01111100,
+  0b11000110,
+  0b11000110,
+  0b11000110,
+  0b01111110,
+  0b00000110,
+  0b00000110,
+  0b00000110,
+  0b00001100,
+  0b01111000
+}};
+
 PFont liberation;
 
 void setup() {
@@ -52,6 +168,7 @@ void setup() {
   //size(800, 600, P2D);
   rectMode(CENTER);
   textAlign(CENTER, CENTER);
+  colorMode(HSB, 255);
   
   // specific known font to work with
   liberation = createFont("LiberationSans-Regular.ttf", height/4, true);
@@ -85,30 +202,35 @@ void draw() {
       numplayers = 0;
       
       // check all currently connected devices if they're on the blacklist
-      for(int cpos = 1; cpos <= Serial.list().length; cpos++){
-        // skip anything else if we're already at player limit
-        if(numplayers == _maxplayers){
-          break;
-        }
-        serial_text = Serial.list()[cpos - 1];
-        boolean bl = false;
-        for(int i = 0; i < 10; i++){
-          if(serial_text.equals(serial_blacklist[i])){
-            bl = true;
+      try{
+        for(int cpos = 1; cpos <= Serial.list().length; cpos++){
+          // skip anything else if we're already at player limit
+          if(numplayers == _maxplayers){
             break;
           }
+          serial_text = Serial.list()[cpos - 1];
+          boolean bl = false;
+          for(int i = 0; i < 10; i++){
+            if(serial_text.equals(serial_blacklist[i])){
+              bl = true;
+              break;
+            }
+          }
+          // darken and hint that it's blacklisted
+          textAlign(RIGHT, CENTER);
+          if(bl){
+            fill(100);
+            text("Blacklisted", width / 2 + 20*wu, height/4 + 4*wu*cpos);
+          }else{
+            fill(255);
+            numplayers++;
+            text("Player " + str(numplayers), width / 2 + 20*wu, height/4 + 4*wu*cpos);
+          }
+          textAlign(LEFT, CENTER);
+          text(serial_text, width / 2 - 20*wu, height/4 + 4*wu*cpos);
         }
-        // darken and hint that it's blacklisted
-        textAlign(RIGHT, CENTER);
-        if(bl){
-          fill(100);
-          text("Blacklisted", width / 2 + 20*wu, height/4 + 4*wu*cpos);
-        }else{
-          numplayers++;
-          text("Player " + str(numplayers), width / 2 + 20*wu, height/4 + 4*wu*cpos);
-        }
-        textAlign(LEFT, CENTER);
-        text(serial_text, width / 2 - 20*wu, height/4 + 4*wu*cpos);
+      }catch(Exception e){
+        println(e.getClass().getName() + " on serial list handled");
       }
       
       // if a device has been removed, remove it from the blacklist for reconnection
@@ -122,7 +244,8 @@ void draw() {
             }
           }
         }catch(Exception e){
-          println("NullPointerException on serial list handled");
+          found = true;
+          println(e.getClass().getName() + " on serial list handled");
         }
         if(!found){
           serial_blacklist[i] = "";
@@ -134,7 +257,7 @@ void draw() {
       textSize(3*wu);
       // homemade animations
       if(millis() - movetime - 2000 < 0){ // cycle through all available players at random speed for 2 seconds
-        fill(255, 255, 255, 255);
+        fill(255, 0, 255, 255);
         text("Board generation", width/2, height/4); 
         for(int i = 0; i < numplayers; i++){
           if(int((millis() + movetime) / randspeed) % numplayers == i){
@@ -152,10 +275,10 @@ void draw() {
         }
         for(int i = 0; i < numplayers; i++){
           if(sel == i){
-            fill(255, 255, 255, 255 * (int((millis()) / 125) % 2));
+            fill(255, 0, 255, 255 * (int((millis()) / 125) % 2));
             text(">> Player " + str(i + 1) + " <<", width/2, height/4 + 4*wu*(1+i));
           }else{
-            fill(255, 255, 255, 255 - map(millis() - movetime - 2750, 0, 500, 0, 255));
+            fill(255, 0, 255, 255 - map(millis() - movetime - 2750, 0, 500, 0, 255));
             text("Player " + str(i + 1), width/2, height/4 + 4*wu*(1+i));
           }
         }
@@ -164,15 +287,28 @@ void draw() {
         if(level.length() != 3){ // if all input is there, fade out
           fadetime = millis();
         }
-        fill(255, 255, 255, min(255, map(millis() - fadetime, 0, 2000, 255, 0)) * (int((millis()) / 250) % 2));
+        fill(255, 0, 255, min(255, map(millis() - fadetime, 0, 2000, 255, 0)) * (int((millis()) / 250) % 2));
         text(">> Player " + str(sel + 1) + " <<", width/2, height/4 + (4*wu*(1+sel) * pow(max(0, map(millis() - movetime - 2750, 0, 500, 1, 0)), 2)));
-        fill(255, 255, 255, min(min(255, map(millis() - movetime - 3000, 0, 500, 0, 255)), map(millis() - fadetime, 0, 2000, 255, 0)));
+        fill(255, 0, 255, min(min(255, map(millis() - movetime - 3000, 0, 500, 0, 255)), map(millis() - fadetime, 0, 2000, 255, 0)));
         text("Use your keypad to provide board layout:", width/2, height/4 + 4*wu);
         textSize(int(10*wu));
-        fill(255, 255, 255, min(255, map(millis() - fadetime, 0, 2000, 255, 0)));
+        fill(255, 0, 255, min(255, map(millis() - fadetime, 0, 2000, 255, 0)));
         text("*".repeat(level.length()), width/2, height/2);
       }else{ // proceed to next game state
+        println("Board design is " + level + " with " + str(numplayers) + " players");
         nextState();
+      }
+      break;
+    case 2:
+      fill(40);
+      rect(lf/2, height/2, lf, height);
+      rect(width - lf/2, height/2, lf, height);
+      for(int i = 0; i < numplayers; i++){
+        fill(255.0 * i / numplayers, 255 * int(numplayers > 1), 255);
+        if(bat_mode[i]){
+          bat_pos[i] = constrain(bat_pos[i] + bat_vel[i], 0, 1);
+        }
+        rect(map(bat_pos[i], 0, 1, lf + (_bat_size*wu / 2), width - (lf + (_bat_size*wu / 2))), height*7/8.0, _bat_size*wu, 2*wu, 0, 0, _bat_size*wu, _bat_size*wu); 
       }
       break;
     default:
@@ -182,7 +318,7 @@ void draw() {
   if(millis() < (hintFade + hintFadeDuration)){
     textAlign(CENTER, CENTER);
     textSize(3*wu);
-    fill(255, 255, 255, 255 * max(0.0, min(1.0, float(hintFade - millis() + hintFadeDuration) / hintFadeDuration)));
+    fill(255, 0, 255, 255 * max(0.0, min(1.0, float(hintFade - millis() + hintFadeDuration) / hintFadeDuration)));
     text(hintMsg, width/2, height*7/8);
   }
 }
@@ -199,9 +335,6 @@ void nextState(){ // switch state if conditions are met
       if(numplayers > 0){ // check if ports were found
         numplayers = -1;
         for(int i = 0; i < Serial.list().length; i++){
-          if(numplayers == _maxplayers){
-            break;
-          }
           serial_text = Serial.list()[i];
           boolean bl = false;
           for(int j = 0; j < 10; j++){
@@ -211,11 +344,14 @@ void nextState(){ // switch state if conditions are met
             }
           }
           if(!bl){ // running through our ports, if this one wasn't on the blacklist, register it
-            print("Registering port " + serial_text + " as player " + str(i + 1) + "... ");
+            print("Registering port " + serial_text + " as player " + str(numplayers + 2) + "... ");
             ser[++numplayers] = new Serial(this, serial_text, baud);
             ser[numplayers].bufferUntil(0x81); // wait for ETX byte
             ser[numplayers].clear();
             println("Done");
+          }
+          if(numplayers == _maxplayers){
+            break;
           }
         }
         numplayers++;
@@ -235,7 +371,9 @@ void nextState(){ // switch state if conditions are met
       }
       break;
     case 1:
-      
+      state = 2;
+      bat_mode[0] = false;
+      bat_mode[1] = false;
       break;
     default:
       break;
@@ -264,21 +402,28 @@ void serialEvent(Serial port) {
       buf = char(port.readBytes());
       port.clear();
       if(buf[0] == 0x80){ // check first byte for STX
-        // handle button input
-        // press to change between absolute or velocity analog control
-        
-        // handle numpad input
-        // if in selection and player is right and keypad is valid and it's a new value and we're in the right part of the sequence and we're not 3 chars long yet
-        if(state == 1 && ply == sel && buf[2] != 17 && keypad_last[ply] != buf[2] && millis() - movetime - 2750 > 0 && level.length() != 3){
-          // add valid keypad entry to level string
-          level += str(byte(buf[2]));
+        switch(buf[1]){
+          case 0x82: // three keypad bytes
+            if(bufl != 6){ // if the packet isn't six bytes long
+              println("Player " + str(ply) + " malformed keypad packet: length " + str(bufl));
+              break;
+            }
+            if(state == 1 && ply == sel && millis() - movetime - 2750 > 0 && level.length() != 3){
+              for(int i = 2; i < 5; i++){
+                level += str(byte(buf[i]));
+              }
+            }
+            break;
+          case 0x83: // byte speed, byte joystick, byte
+            if(bat_mode[ply]){
+              bat_vel[ply] = map(float(buf[4]), 0.0, 127.0, _bat_speed / frameRate, -_bat_speed / frameRate);
+            }else{
+              bat_pos[ply] = map(float(buf[4]), 0.0, 127.0, 1.0, 0.0);
+            }
+            break;
+          default:
+            break;
         }
-        keypad_last[ply] = buf[2];
-        
-        // handle analog input
-        // based on desired control scheme, either set position or set velocity
-        
-        
       }else{ // if STX isn't there, drop and inform
         println("Player " + str(ply + 1) + " malformed packet");
       }
