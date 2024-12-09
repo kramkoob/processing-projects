@@ -9,14 +9,13 @@ final static byte _maxplayers = 3;
 final static int _baud = 19200;
 final static byte _num_walls = 2;
 
-final static float _ball_size = 0.2;
+final static float _ball_size = 2;
 final static float _bat_size = 20;
-final static float _bat_speed = 1.5;
+final static float _bat_width = 2;
+final static float _wall_width = 2;
 
 // less important things
 final static int hintFadeDuration = 1000;
-final static float _bat_width = 2;
-final static float _wall_width = 2;
 
 import processing.serial.*;
 
@@ -32,9 +31,14 @@ int[] sel = new int[_maxplayers];
 // game things
 byte numplayers = 0;
 float[] bat_pos = new float[_maxplayers];
-float[][] walls = new float[_maxplayers][_num_walls];
+float[][] walls = new float[_maxplayers][_num_walls + 1];
 int[] wall_pos = new int[_num_walls];
+boolean walls_ready = false;
 int ply = -1;
+float[] ball_pos = new float[2];
+float[] ball_vel = new float[2];
+int ball_bounces = 0;
+int[] scores = new int[_maxplayers];
     
 // hint message
 int hintFade = -1500;
@@ -69,9 +73,13 @@ void setup() {
     wall_pos[i] = int(lf + wu * 20 * (1+ i));
   }
   
-  // set initial bat positions
+  // set initial bat positions and wall parameters (-1 to hide until input is given)
   for(int i = 0; i < _maxplayers; i++){
     bat_pos[i] = 50;
+    for(int j = 0; j < _num_walls; j++){
+      walls[i][j] = -1;
+    }
+    walls[i][_num_walls] = 0;
   }
   
   // initial configuration of serial blacklist
@@ -140,7 +148,7 @@ void draw() {
           }
         }catch(Exception e){
           found = true;
-          println(e.getClass().getName() + " on serial list handled");
+          println(e.getClass().getName() + " in serial list handled");
         }
         if(!found){
           serial_blacklist[i] = "";
@@ -152,16 +160,8 @@ void draw() {
       rect(lf/2, height/2, lf, height);
       rect(width - lf/2, height/2, lf, height);
       textAlign(CENTER, CENTER);
+      draw_elements(false);
       textSize(3*wu);
-      for(int i = 0; i < numplayers; i++){
-        fill(255.0 * i / numplayers, 255, 255);
-        rect(invertw(lf + wu * _bat_width / 2.0, (i%2)==1), wu * bat_pos[i], wu * _bat_width, wu * _bat_size);
-        for(int j = 0; j < _num_walls; j++){
-          rect(invertw(wall_pos[j], (i%2)==1), inverth(walls[i][j] * wu * 5, (j%2)==1), _wall_width * wu, walls[i][j] * wu * 10);
-          textSize(5*wu);
-          text(str(walls[i][j]), invertw(wall_pos[j], (i%2)==1), inverth((0.25 + walls[i][j]) * wu * 10, (j%2)==1));
-        }
-      }
       fill(255, 0, 255, 255);
       text("Provide " + str(_num_walls) + " wall heights each, using keypad", width/2, height/4);
       break;
@@ -169,15 +169,8 @@ void draw() {
       fill(40);
       rect(lf/2, height/2, lf, height);
       rect(width - lf/2, height/2, lf, height);
-      for(int i = 0; i < numplayers; i++){
-        fill(255.0 * i / numplayers, 255, 255);
-        rect(invertw(lf + wu * _bat_width / 2.0, (i%2)==1), wu * bat_pos[i], wu * _bat_width, wu * _bat_size);
-        for(int j = 0; j < _num_walls; j++){
-          rect(invertw(wall_pos[j], (i%2)==1), inverth(walls[i][j] * wu * 5, (j%2)==1), _wall_width * wu, walls[i][j] * wu * 10);
-          textSize(5*wu);
-          text(str(int(walls[i][j])), invertw(wall_pos[j], (i%2)==1), inverth((0.25 + walls[i][j]) * wu * 10, (j%2)==1));
-        }
-      }
+      ball_physics();
+      draw_elements(true);
       break;
     default:
       break;
@@ -188,6 +181,31 @@ void draw() {
     textSize(3*wu);
     fill(255, 0, 255, 255 * max(0.0, min(1.0, float(hintFade - millis() + hintFadeDuration) / hintFadeDuration)));
     text(hintMsg, width/2, height*7/8);
+  }
+}
+
+void ball_physics(){
+  
+}
+
+void draw_elements(boolean game){
+  for(int i = 0; i < numplayers; i++){
+    fill(255.0 * i / numplayers, 255, 255);
+    textSize(5*wu);
+    rect(invertw(lf + wu * _bat_width / 2.0, (i%2)==1), wu * bat_pos[i], wu * _bat_width, wu * _bat_size);
+    for(int j = 0; j < _num_walls; j++){
+      rect(invertw(wall_pos[j], (i%2)==1), inverth(walls[i][j] * wu * 5, (j%2)==1), _wall_width * wu, walls[i][j] * wu * 10);
+      if(!game){
+        text(str(walls[i][j]), invertw(wall_pos[j], (i%2)==1), inverth((0.25 + walls[i][j]) * wu * 10, (j%2)==1));
+      }
+    }
+    if(game){
+      text(str(scores[i]), invertw(lf + 10 * wu, (i%2)==1), wu * 10);
+    }
+  }
+  if(game){
+    fill(255);
+    circle(ball_pos[0], ball_pos[1], _ball_size);
   }
 }
 
@@ -242,7 +260,16 @@ void nextState(){ // switch state if conditions are met
       }
       break;
     case 1:
-      state = 2;
+      if(walls_ready){
+        // initial ball parameters
+        ball_pos[0] = 50;
+        ball_pos[1] = 50;
+        ball_vel[0] = float(int(random(0.5, 1.5))) - 0.5;
+        ball_vel[1] = float(int(random(0.5, 1.5))) - 0.5;
+        state = 2;
+      }else{
+        setHint("Waiting for all players to set walls...", 1);
+      }
       break;
     default:
       break;
@@ -270,21 +297,33 @@ void serialEvent(Serial port) {
       switch(buf[1]){
         case 0x82: // keypad input
           if(bufl != 6){ // if the packet isn't six bytes long
-            println("Player " + str(ply + 1) + " malformed keypad packet: length " + str(bufl));
+            println("Player " + str(ply + 1) + " bad keypad packet: length " + str(bufl));
             break;
           }
-          switch(state){
-            case 1:
-              walls[ply][0] = int(str(byte(buf[2])));
-              walls[ply][1] = int(str(byte(buf[3])));
-              break;
-            default:
-              break;
+          if(state == 1){
+            // update walls
+            for(int i = 0; i < _num_walls; i++){
+              walls[ply][i] = int(str(byte(buf[i+2])));
+            }
+            // indicate this player's walls are set
+            walls[ply][_num_walls] = 1;
+            // check if all players' walls have been set
+            if(!walls_ready){
+              walls_ready = true;
+              for(int i = 0; i < numplayers; i++){
+                if(walls[i][_num_walls] == 0){
+                  walls_ready = false;
+                }
+              }
+              if(walls_ready){
+                setHint("Press enter to start", 5);
+              }
+            }
           }
           break;
         case 0x83: // byte potentiometer position
           if(bufl != 6){
-            println("Player " + str(ply + 1) + " malformed position packet: length " + str(bufl));
+            println("Player " + str(ply + 1) + " bad position packet: length " + str(bufl));
             break;
           }
           bat_pos[ply] = map(float(buf[4]), 0.0, 127.0, _bat_size / 2, 100 - _bat_size / 2);
