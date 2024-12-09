@@ -10,9 +10,12 @@ final static int _baud = 19200;
 final static byte _num_walls = 2;
 
 final static float _ball_size = 2;
-final static float _bat_size = 20;
+final static float _bat_size = 10;
 final static float _bat_width = 2;
-final static float _wall_width = 2;
+final static float _wall_width = 3;
+final static float _ball_initial_speed = 50;
+final static int _bounces_per_speedup = 10;
+final static float _speedup_factor = 1.2;
 
 // less important things
 final static int hintFadeDuration = 1000;
@@ -33,6 +36,7 @@ byte numplayers = 0;
 float[] bat_pos = new float[_maxplayers];
 float[][] walls = new float[_maxplayers][_num_walls + 1];
 int[] wall_pos = new int[_num_walls];
+float[] wall_pos_draw = new float[_num_walls];
 boolean walls_ready = false;
 int ply = -1;
 float[] ball_pos = new float[2];
@@ -41,19 +45,29 @@ int ball_bounces = 0;
 int[] scores = new int[_maxplayers];
     
 // hint message
-int hintFade = -1500;
+int hintFade = -1000;
 String hintMsg = "";
 
 // window variables
 byte state = 0;
 float wu;
 int lf;
+int startMillis = 0;
+
+// maths
+float wp;
+float[] bps = new float[2];
+float[] wps = new float[3];
+float ball_vel_l;
+float[] wv = new float[2];
+float wv_l;
 
 PFont liberation;
 
 void setup() {
   //fullScreen(P2D);
-  size(1100, 950, P2D);
+  fullScreen(P2D, 2);
+  //size(1100, 950, P2D);
   frameRate(60);
   rectMode(CENTER);
   textAlign(CENTER, CENTER);
@@ -70,7 +84,8 @@ void setup() {
   
   // set up wall positions
   for(int i = 0; i < _num_walls; i++){
-    wall_pos[i] = int(lf + wu * 20 * (1+ i));
+    wall_pos[i] = 20 * (1+ i);
+    wall_pos_draw[i] = lf + wu * wall_pos[i];
   }
   
   // set initial bat positions and wall parameters (-1 to hide until input is given)
@@ -156,19 +171,12 @@ void draw() {
       }
       break;
     case 1: // prompt walls
-      fill(40);
-      rect(lf/2, height/2, lf, height);
-      rect(width - lf/2, height/2, lf, height);
-      textAlign(CENTER, CENTER);
       draw_elements(false);
       textSize(3*wu);
       fill(255, 0, 255, 255);
       text("Provide " + str(_num_walls) + " wall heights each, using keypad", width/2, height/4);
       break;
-    case 2:
-      fill(40);
-      rect(lf/2, height/2, lf, height);
-      rect(width - lf/2, height/2, lf, height);
+    case 2: // play ball
       ball_physics();
       draw_elements(true);
       break;
@@ -185,34 +193,102 @@ void draw() {
 }
 
 void ball_physics(){
-  
+  if(millis() > startMillis + 1000){
+    for(int i = 0; i < 2; i++){
+      ball_pos[i] += ball_vel[i] / frameRate;
+      bps[i] = ball_pos[i] + ((ball_vel[i] > 0) ? _ball_size : -_ball_size) / 2;
+    }
+    for(int ply = 0; ply < numplayers; ply++){
+      for(int wall = 0; wall < _num_walls; wall++){
+        for(int i = 0; i < 2; i++){
+          wps[i] = (ply%2) == 0 ? wall_pos[wall] : 100 - wall_pos[wall];
+          wps[i] += (i%2==0 ? -_wall_width : _wall_width) / 2;
+        }
+        wps[2] = (wall%2==0) ? walls[ply][wall] * 10 : 100 - walls[ply][wall] * 10;
+        if(constrain(bps[0], wps[0], wps[1]) == bps[0]){
+          if(constrain(bps[1], ball_vel[1] < 0 ? wps[2] - _wall_width : wps[2], ball_vel[1] < 0 ? wps[2] : wps[2] + _wall_width) == bps[1]
+            && (ball_vel[1] > 0 ? ball_pos[1] < wps[2] : ball_pos[1] > wps[2])){
+            ball_vel[1] = -ball_vel[1];
+          }else if(wall % 2 ==0 ? bps[1] < wps[2] : bps[1] > wps[2]){
+            ball_vel[0] = -ball_vel[0];
+            ball_bounces++;
+          }
+        }
+      }
+      if(constrain(bps[1], bat_pos[ply] - _bat_size / 2, bat_pos[ply] + _bat_size / 2) == bps[1]
+        && ((ply % 2 == 0) ? (bps[0] < _bat_width) : (bps[0] > (100 - _bat_width)))){
+        ball_vel_l = sqrt(pow(ball_vel[0], 2) + pow(ball_vel[1], 2));
+        wv[0] = ball_pos[0] < 50 ? ball_vel_l : -ball_vel_l;
+        wv[1] = 120 * (ball_pos[1] - bat_pos[ply]) / _bat_size;
+        wv_l = sqrt(pow(wv[0], 2) + pow(wv[1], 2));
+        ball_vel[0] = wv[0] * (ball_vel_l / wv_l);
+        ball_vel[1] = wv[1] * (ball_vel_l / wv_l);
+      }
+    }
+    if(bps[1] < 0 || bps[1] > 100){
+      ball_vel[1] = -ball_vel[1];
+      ball_bounces++;
+    }
+    if(ball_pos[0] < 0){
+      for(int i = 1; i < numplayers; i+=2){
+        scores[i]+=1;
+      }
+      ball_init();
+      startMillis = millis() + 2000;
+    }
+    if(ball_pos[0] > 100){
+      for(int i = 0; i < numplayers; i+=2){
+        scores[i]+=1;
+      }
+      ball_init();
+      startMillis = millis() + 2000;
+    }
+    if(ball_bounces > _bounces_per_speedup - 1){
+      for(int i = 0; i < 2; i++){
+        ball_vel[i] *= _speedup_factor;
+        ball_bounces = 0;
+      }
+    }
+  }
 }
 
 void draw_elements(boolean game){
+  textAlign(CENTER, CENTER);
   for(int i = 0; i < numplayers; i++){
     fill(255.0 * i / numplayers, 255, 255);
     textSize(5*wu);
-    rect(invertw(lf + wu * _bat_width / 2.0, (i%2)==1), wu * bat_pos[i], wu * _bat_width, wu * _bat_size);
+    rect(invertw(lf, (i%2)==1), wu * bat_pos[i], wu * _bat_width * 2, wu * _bat_size, wu * _bat_width);
     for(int j = 0; j < _num_walls; j++){
-      rect(invertw(wall_pos[j], (i%2)==1), inverth(walls[i][j] * wu * 5, (j%2)==1), _wall_width * wu, walls[i][j] * wu * 10);
+      rect(invertw(wall_pos_draw[j], (i%2)==1), inverth(0, (j%2)==1), _wall_width * wu, walls[i][j] * wu * 20, wu * _wall_width / 2);
       if(!game){
-        text(str(walls[i][j]), invertw(wall_pos[j], (i%2)==1), inverth((0.25 + walls[i][j]) * wu * 10, (j%2)==1));
+        text(str(int(walls[i][j])), invertw(wall_pos_draw[j], (i%2)==1), inverth((0.25 + walls[i][j]) * wu * 10, (j%2)==1));
       }
     }
     if(game){
       text(str(scores[i]), invertw(lf + 10 * wu, (i%2)==1), wu * 10);
     }
   }
-  if(game){
+  if(game && millis() > startMillis){
     fill(255);
-    circle(ball_pos[0], ball_pos[1], _ball_size);
+    circle(lf + ball_pos[0] * wu, ball_pos[1] * wu, _ball_size * wu);
   }
+  fill(40);
+  rect(lf/2, height/2, lf, height);
+  rect(width - lf/2, height/2, lf, height);
 }
 
 void setHint(String msg, int time){
   hintFade = millis() + time * 1000;
   hintMsg = msg;
   println(msg);
+}
+
+void ball_init(){
+  ball_pos[0] = 50;
+  ball_pos[1] = 50;
+  ball_vel[0] = (float(int(random(0.5, 1.5))) - 0.5) * _ball_initial_speed;
+  ball_vel[1] = (float(int(random(0.5, 1.5))) - 0.5) * _ball_initial_speed;
+  ball_bounces = 0;
 }
 
 float invertw(float val, boolean invert){
@@ -262,10 +338,8 @@ void nextState(){ // switch state if conditions are met
     case 1:
       if(walls_ready){
         // initial ball parameters
-        ball_pos[0] = 50;
-        ball_pos[1] = 50;
-        ball_vel[0] = float(int(random(0.5, 1.5))) - 0.5;
-        ball_vel[1] = float(int(random(0.5, 1.5))) - 0.5;
+        startMillis = millis() + 500;
+        ball_init();
         state = 2;
       }else{
         setHint("Waiting for all players to set walls...", 1);
@@ -316,7 +390,7 @@ void serialEvent(Serial port) {
                 }
               }
               if(walls_ready){
-                setHint("Press enter to start", 5);
+                setHint("Press enter to start", 2);
               }
             }
           }
